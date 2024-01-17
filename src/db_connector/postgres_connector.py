@@ -13,10 +13,13 @@ class AsyncDatabaseConnector:
         if self.connection:
             await self.connection.close()
 
-    async def execute(self, query, *args):
+    async def execute(self, query, *args, **kwargs):
         if not self.connection:
             await self.connect()
-        return await self.connection.execute(query, *args)
+        if kwargs:
+            return await self.connection.execute(query, *args, **kwargs)
+        else:
+            return await self.connection.execute(query, *args)
 
     async def fetch(self, query, *args):
         if not self.connection:
@@ -28,8 +31,10 @@ class AsyncDatabaseConnector:
             await self.connect()
         return await self.connection.fetchrow(query, *args)
 
-    async def fetch_data(self, query):
-        return await self.fetch(query)
+    async def fetchval(self, query, *args):
+        if not self.connection:
+            await self.connect()
+        return await self.connection.fetchval(query, *args)
 
-    async def insert_data(self, query, *args):
-        return await self.execute(query, *args)
+    async def insert_data(self, query, *args, **kwargs):
+        return await self.execute(query, *args, **kwargs)

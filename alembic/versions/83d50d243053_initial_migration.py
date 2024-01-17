@@ -1,8 +1,8 @@
-"""Create schema and tables
+"""Initial migration
 
-Revision ID: bd956f938a2d
+Revision ID: 83d50d243053
 Revises: 
-Create Date: 2024-01-15 12:56:36.370573
+Create Date: 2024-01-16 01:14:59.920434
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'bd956f938a2d'
+revision: str = '83d50d243053'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(), nullable=True),
-    sa.Column('is_banned', sa.Boolean(), nullable=True),
+    sa.Column('is_banned', sa.Boolean(), server_default=sa.text('false'), nullable=True),
     sa.Column('ban_until', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('username'),
@@ -32,8 +32,8 @@ def upgrade() -> None:
     op.create_table('message_limits',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('message_count', sa.Integer(), nullable=True),
-    sa.Column('reset_time', sa.DateTime(), nullable=True),
+    sa.Column('message_count', sa.Integer(), server_default=sa.text('0'), nullable=True),
+    sa.Column('reset_time', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['awesome_chat.users.id'], ),
     sa.PrimaryKeyConstraint('id'),
     schema='awesome_chat'
@@ -42,7 +42,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('text', sa.String(), nullable=True),
-    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('timestamp', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['awesome_chat.users.id'], ),
     sa.PrimaryKeyConstraint('id'),
     schema='awesome_chat'
@@ -51,7 +51,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('complainant_id', sa.Integer(), nullable=True),
     sa.Column('offender_id', sa.Integer(), nullable=True),
-    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('timestamp', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['complainant_id'], ['awesome_chat.users.id'], ),
     sa.ForeignKeyConstraint(['offender_id'], ['awesome_chat.users.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -61,7 +61,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('session_token', sa.String(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['awesome_chat.users.id'], ),
     sa.PrimaryKeyConstraint('id'),
     schema='awesome_chat'
