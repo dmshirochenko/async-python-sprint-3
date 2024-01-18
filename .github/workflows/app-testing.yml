@@ -46,4 +46,4 @@ jobs:
           echo "${{ secrets.DOTENV_CONTENT }}" > .env
 
       - name: Running tests
-        run: run_tests.sh
+        run: ./run_tests.sh
