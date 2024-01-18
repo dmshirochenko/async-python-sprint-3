@@ -33,7 +33,6 @@ class HTTPProtocol(asyncio.Protocol):
         for name, value in headers:
             if name.lower() == b"authorization":
                 return value.decode("utf-8")
-        print("Authorization header is missing")
         return None
 
     async def handle_request(self):
@@ -47,6 +46,8 @@ class HTTPProtocol(asyncio.Protocol):
                     await self.handle_connect(event)
                 elif event.method.upper() == b"GET" and parsed_target.path == "/status":
                     await self.handle_status(event, token)
+                elif event.method.upper() == b"GET" and parsed_target.path == "/health":
+                    await self.handle_health(event)
                 elif event.method.upper() == b"POST" and parsed_target.path == "/send":
                     await self.handle_send(event, token)
                 elif event.method.upper() == b"POST" and parsed_target.path == "/send-private":
@@ -57,14 +58,26 @@ class HTTPProtocol(asyncio.Protocol):
         if self.connection.our_state is h11.MUST_CLOSE:
             self.transport.close()
 
+    async def handle_health(self, event):
+        response = {"status": "OK"}
+        response_info = json.dumps(response).encode()
+        await self.send_response(response_info)
+
     async def handle_connect(self, event):
-        message = "Connected to the chat with user_id "
+        response = {"status": "failure", "user_id": None}
         token = await self.auth_instance.create_user_and_token()
+
         if token:
             user_id = await self.auth_instance.get_user_id_from_token(token)
-            message += str(user_id)
-        byte_message = message.encode()
-        self.send_response(byte_message, token)
+            if user_id is not None:
+                response["status"] = "success"
+                response["user_id"] = user_id
+
+        # Assuming you still need to send some response back
+        connection_info = json.dumps(response).encode()
+        self.send_response(connection_info, token)
+
+        return response
 
     def _parse_query_params(self, url):
         parsed_url = urllib.parse.urlparse(url)
@@ -118,7 +131,7 @@ class HTTPProtocol(asyncio.Protocol):
 
     def send_response(self, body, token=None):
         headers = [
-            ("content-type", "text/plain"),
+            ("Content-Type", "application/json"),
             ("content-length", str(len(body))),
         ]
         if token:

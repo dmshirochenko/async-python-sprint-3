@@ -18,6 +18,7 @@ class ChatClient:
                 print("Connected successfully.")
             else:
                 print("Authorization token not received.")
+            return response
         except requests.RequestException as e:
             print(f"Failed to connect: {e}")
 
@@ -28,6 +29,7 @@ class ChatClient:
             response = requests.get(url_to_send, headers=headers, params=params)
             response.raise_for_status()
             print(response.text)
+            return response
         except requests.RequestException as e:
             print(f"Failed to retrieve chat history: {e}")
 
@@ -44,6 +46,7 @@ class ChatClient:
             response = requests.post(url_to_send, data=data, headers=headers)
             response.raise_for_status()
             print(response.text)
+            return response
         except requests.RequestException as e:
             print(f"Failed to send message: {e}")
 
