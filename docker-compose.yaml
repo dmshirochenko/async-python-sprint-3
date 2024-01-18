@@ -45,6 +45,7 @@ services:
     build:
       context: .
       dockerfile: tests/Dockerfile
+    container_name: test-service
     env_file:
       - .env
     depends_on:
