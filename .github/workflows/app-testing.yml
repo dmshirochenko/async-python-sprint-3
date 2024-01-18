@@ -34,16 +34,16 @@ jobs:
         # exit-zero treats all errors as warnings
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=119 --statistics --config=setup.cfg
 
-    tests:
-      runs-on: ubuntu-latest
+  tests:
+    runs-on: ubuntu-latest
 
-      steps:
-          - name: Checkout branch
-            uses: actions/checkout@v3
-            
-          - name: Recreate .env
-            run: |
-              echo "${{ secrets.DOTENV_CONTENT }}" > .env
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        
+      - name: Recreate .env
+        run: |
+          echo "${{ secrets.DOTENV_CONTENT }}" > .env
 
-          - name: Running tests
-            run: run_tests.sh
+      - name: Running tests
+        run: run_tests.sh
