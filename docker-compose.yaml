@@ -18,3 +18,41 @@ services:
     volumes:
       - ./postgres_db/db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
       - ./postgres_instance/data:/var/lib/postgresql/data
+    networks:
+      - mynetwork
+
+  my-python-server:
+    build: .
+    container_name: my-python-server
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://my-python-server:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mynetwork
+
+  test-service:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    container_name: test-service
+    env_file:
+      - .env
+    depends_on:
+      my-python-server:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:

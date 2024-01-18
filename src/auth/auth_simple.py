@@ -55,6 +55,7 @@ class Auth:
 
 
 if __name__ == "__main__":
+
     async def run():
         db_url = "postgresql://app_test:123test@localhost/db_awesome_chat"
         db = AsyncDatabaseConnector(db_url)
