@@ -21,16 +21,17 @@ def test_user_connections(server_url):
     response2_json = json.loads(response2.text)
 
     print(response1_json, response2_json)
-    assert response1_json['status'] == "success", "User 1 failed to connect"
-    assert response2_json['status'] == "success", "User 2 failed to connect"
+    assert response1_json["status"] == "success", "User 1 failed to connect"
+    assert response2_json["status"] == "success", "User 2 failed to connect"
 
-    assert response1_json['user_id'] is not None, "User 1 did not receive a user_id"
-    assert response2_json['user_id'] is not None, "User 2 did not receive a user_id"
+    assert response1_json["user_id"] is not None, "User 1 did not receive a user_id"
+    assert response2_json["user_id"] is not None, "User 2 did not receive a user_id"
 
-    user1.user_id = response1_json['user_id']
-    user2.user_id = response2_json['user_id']
+    user1.user_id = response1_json["user_id"]
+    user2.user_id = response2_json["user_id"]
 
-    return user1, user2 
+    return user1, user2
+
 
 def test_send_public_message(server_url):
     user1, user2 = test_user_connections(server_url)
@@ -44,6 +45,7 @@ def test_send_public_message(server_url):
     history = user2.get_chat_history({"chat_type": "common"})
     assert message in history.text, "User 2 did not receive the public message"
 
+
 def test_private_message_exchange(server_url):
     user1, user2 = test_user_connections(server_url)
 
@@ -55,4 +57,3 @@ def test_private_message_exchange(server_url):
     # Test if user2 received the message
     history = user2.get_chat_history({"chat_type": "private", "recipient_id": user1.user_id})
     assert message in history.text, "User 2 did not receive the message"
-
