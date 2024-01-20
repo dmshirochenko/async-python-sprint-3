@@ -23,7 +23,7 @@ async def main(host, port):
     loop = asyncio.get_running_loop()
 
     # Use environment variable for database URL
-    db_url = os.getenv("DATABASE_URL", "postgresql://app_test:123test@postgres/db_awesome_chat")
+    db_url = os.getenv("DATABASE_URL", "postgresql://test_user:test_user_password@postgres/db_awesome_chat")
 
     db_connector = AsyncDatabaseConnector(db_url)
     await db_connector.connect()
