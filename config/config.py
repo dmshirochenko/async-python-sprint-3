@@ -24,6 +24,7 @@ class ErrorMessages(BaseModel):
     not_found: HTTPError = HTTPError(message="Not Found", status_code=404)
     method_not_allowed: HTTPError = HTTPError(message="Method Not Allowed", status_code=405)
     internal_server_error: HTTPError = HTTPError(message="Internal Server Error", status_code=500)
+    request_timeout_error: HTTPError = HTTPError(message="Request processing timed out", status_code=408)
 
 
 class Settings(BaseSettings):
