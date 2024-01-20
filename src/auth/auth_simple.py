@@ -1,8 +1,6 @@
 import secrets
 from typing import Optional
 
-import asyncio
-
 from src.db_connector.postgres_connector import AsyncDatabaseConnector
 
 
@@ -52,22 +50,3 @@ class Auth:
         except Exception as e:
             print(f"Error retrieving user ID from token: {e}")
             return None
-
-
-if __name__ == "__main__":
-
-    async def run():
-        db_url = "postgresql://app_test:123test@localhost/db_awesome_chat"
-        db = AsyncDatabaseConnector(db_url)
-        await db.connect()
-        auth = Auth(db)
-
-        try:
-            token = await auth.create_user_and_token()
-            if token:
-                user_id = await auth.get_user_id_from_token(token)
-                print(user_id)
-        finally:
-            await db.close()
-
-    asyncio.run(run())

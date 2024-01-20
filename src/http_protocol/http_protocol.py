@@ -5,9 +5,11 @@ from typing import Any, Optional, Dict, List, Tuple
 
 import h11
 import asyncio
+import asyncpg
 
 from config.config import settings
 from config.logger import LOGGING
+from src.message_sender.message_sender import MessageLimitReachedError
 
 logging.config.dictConfig(LOGGING)
 logger = logging.getLogger(__name__)
@@ -65,7 +67,6 @@ class HTTPProtocol(asyncio.Protocol):
         logger.info("Proceeding with headers %s  and body  %s", request_headers, request_body)
         parsed_target = urllib.parse.urlparse(request_headers.target.decode("utf-8"))
         method = request_headers.method.upper()
-
         try:
             if method == b"GET":
                 await asyncio.wait_for(
@@ -152,7 +153,15 @@ class HTTPProtocol(asyncio.Protocol):
                 all_messages = await self.message_sender_instance.retrieve_messages()
                 response = {"messages": all_messages}
             elif chat_type == "private" and recipient_id:
-                private_messages = await self.message_sender_instance.retrieve_private_messages(user_id, recipient_id)
+                recipient_id = int(recipient_id)
+                if await self.message_sender_instance.is_user_exists(recipient_id):
+                    private_messages = await self.message_sender_instance.retrieve_private_messages(
+                        user_id, recipient_id
+                    )
+                else:
+                    logger.error("Error: Recipient user has not been found")
+                    self.send_error_response(settings.error_messages.user_has_not_been_found)
+                    return
                 response = {"messages": private_messages}
             else:
                 self.send_error_response(settings.error_messages.invalid_parameters)
@@ -169,21 +178,34 @@ class HTTPProtocol(asyncio.Protocol):
         try:
             logger.info("Received data %s", request_body)
             user_id = await self.auth_instance.get_user_id_from_token(token)
+            if user_id:
+                message_data = json.loads(request_body.decode("utf-8"))
+                text = message_data["text"]
+                recipient_id = message_data.get("recipient_id")
 
-            message_data = json.loads(request_body.decode("utf-8"))
-            text = message_data["text"]
-            recipient_id = message_data.get("recipient_id")
-
-            message_id = await self.message_sender_instance.insert_message(user_id, text)
-            if message_type == "private" and recipient_id is not None:
-                await self.message_sender_instance.insert_private_message(message_id, recipient_id)
-
-            response_body = json.dumps({"message": "Message received."}).encode("utf-8")
-            self.send_response(response_body)
+                message_id = await self.message_sender_instance.send_message(user_id, text)
+                if message_type == "private" and recipient_id is not None:
+                    recipient_id = int(recipient_id)
+                    if await self.message_sender_instance.is_user_exists(recipient_id):
+                        await self.message_sender_instance.insert_private_message(message_id, recipient_id)
+                    else:
+                        logger.error("Error: Recipient user has not been found")
+                        self.send_error_response(settings.error_messages.user_has_not_been_found)
+                        return
+                response_body = json.dumps({"message": "Message received."}).encode("utf-8")
+                self.send_response(response_body)
+            else:
+                logger.error("Error: User has not been found")
+                self.send_error_response(settings.error_messages.user_has_not_been_found)
         except json.JSONDecodeError:
             self.send_error_response(settings.error_messages.invalid_json_format)
         except KeyError:
             self.send_error_response(settings.error_messages.missing_required_data)
+        except MessageLimitReachedError:
+            self.send_error_response(settings.error_messages.message_limit_reached)
+        except asyncpg.PostgresError:
+            logger.error("Database error occurred.")
+            self.send_error_response(settings.error_messages.database_error)
         except Exception as e:
             logger.error("Unexpected error: %s", e)
             self.send_error_response(settings.error_messages.internal_server_error)
