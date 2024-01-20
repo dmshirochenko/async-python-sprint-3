@@ -1,6 +1,7 @@
 import json
 import urllib.parse
 import logging.config
+from typing import Any, Optional, Dict, List, Tuple
 
 import h11
 import asyncio
@@ -13,18 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 class HTTPProtocol(asyncio.Protocol):
-    def __init__(self, auth_instance, message_sender_instance):
-        self.connection = h11.Connection(h11.SERVER)
+    def __init__(self, auth_instance: Any, message_sender_instance: Any) -> None:
+        self.connection: h11.Connection = h11.Connection(h11.SERVER)
         self.auth_instance = auth_instance
         self.message_sender_instance = message_sender_instance
-        self.request_buffer = bytearray()
-        self.current_request = None
+        self.request_buffer: bytearray = bytearray()
+        self.current_request: Optional[h11.Request] = None
+        self.transport: Optional[asyncio.transports.Transport] = None
 
-    def connection_made(self, transport):
+    def connection_made(self, transport: asyncio.transports.Transport) -> None:
         self.transport = transport
         logger.info("New connection has been made ...")
 
-    def data_received(self, data):
+    def data_received(self, data: bytes) -> None:
         self.connection.receive_data(data)
         while True:
             event = self.connection.next_event()
@@ -53,13 +55,13 @@ class HTTPProtocol(asyncio.Protocol):
                 if self.connection.our_state is h11.MUST_CLOSE:
                     self.transport.close()
 
-    def _extract_token(self, headers):
+    def _extract_token(self, headers: List[Tuple[bytes, bytes]]) -> Optional[str]:
         for name, value in headers:
             if name.lower() == b"authorization":
                 return value.decode("utf-8")
         return None
 
-    async def handle_request(self, request_headers, request_body):
+    async def handle_request(self, request_headers: h11.Request, request_body: bytes) -> None:
         logger.info("Proceeding with headers %s  and body  %s", request_headers, request_body)
         parsed_target = urllib.parse.urlparse(request_headers.target.decode("utf-8"))
         method = request_headers.method.upper()
@@ -77,16 +79,20 @@ class HTTPProtocol(asyncio.Protocol):
                 )
         except asyncio.TimeoutError:
             logger.error("Request processing timed out")
-            self.send_timeout_response()
+            self.send_error_response(settings.error_messages.request_timeout_error)
 
-    async def handle_get_request(self, parsed_target, request_headers, request_body):
+    async def handle_get_request(
+        self, parsed_target: urllib.parse.ParseResult, request_headers: h11.Request, request_body: bytes
+    ) -> None:
         if parsed_target.path == "/status":
             token = self._extract_token(request_headers.headers)
             await self.handle_status(parsed_target, token)
         elif parsed_target.path == "/health":
             await self.handle_health()
 
-    async def handle_post_request(self, parsed_target, request_headers, request_body):
+    async def handle_post_request(
+        self, parsed_target: urllib.parse.ParseResult, request_headers: h11.Request, request_body: bytes
+    ) -> None:
         token = self._extract_token(request_headers.headers)
         if parsed_target.path == "/connect":
             await self.handle_connect()
@@ -95,16 +101,16 @@ class HTTPProtocol(asyncio.Protocol):
         elif parsed_target.path == "/send-private":
             await self.handle_send(request_body, token, message_type="private")
 
-    async def handle_health(self):
+    async def handle_health(self) -> None:
         try:
             response = {"status": "OK"}
             response_info = json.dumps(response).encode()
             self.send_response(response_info)
         except Exception as e:
-            logger.error(f"Error in handle_health: {e}")
+            logger.error("Error in handle_health: %s", e)
             self.send_error_response(settings.error_messages.internal_server_error)
 
-    async def handle_connect(self):
+    async def handle_connect(self) -> None:
         try:
             logger.info("User auth starting ...")
             token = await self.auth_instance.create_user_and_token()
@@ -120,14 +126,14 @@ class HTTPProtocol(asyncio.Protocol):
             else:
                 self.send_error_response(settings.error_messages.internal_server_error)
         except Exception as e:
-            logger.error(f"Error in handle_connect: {e}")
+            logger.error("Error in handle_connect: %s", e)
             self.send_error_response(settings.error_messages.internal_server_error)
 
-    def _parse_query_params(self, parsed_url):
+    def _parse_query_params(self, parsed_url: urllib.parse.ParseResult) -> Dict[str, str]:
         query_params = urllib.parse.parse_qs(parsed_url.query)
         return {k: v[0] for k, v in query_params.items()}
 
-    async def handle_status(self, parsed_target, token=None):
+    async def handle_status(self, parsed_target: urllib.parse.ParseResult, token: Optional[str] = None) -> None:
         try:
             query_params = self._parse_query_params(parsed_target)
             chat_type = query_params.get("chat_type")
@@ -156,10 +162,10 @@ class HTTPProtocol(asyncio.Protocol):
             self.send_response(status_info)
 
         except Exception as e:
-            logger.error(f"Error in handle_status: {e}")
+            logger.error("Error in handle_status: %s", e)
             self.send_error_response(settings.error_messages.internal_server_error)
 
-    async def handle_send(self, request_body, token, message_type=None):
+    async def handle_send(self, request_body: bytes, token: str, message_type: Optional[str] = None) -> None:
         try:
             logger.info("Received data %s", request_body)
             user_id = await self.auth_instance.get_user_id_from_token(token)
@@ -179,10 +185,10 @@ class HTTPProtocol(asyncio.Protocol):
         except KeyError:
             self.send_error_response(settings.error_messages.missing_required_data)
         except Exception as e:
-            logger.error(f"Unexpected error: {e}")
+            logger.error("Unexpected error: %s", e)
             self.send_error_response(settings.error_messages.internal_server_error)
 
-    def send_response(self, body, token=None):
+    def send_response(self, body: bytes, token: Optional[str] = None) -> None:
         headers = [
             ("Content-Type", "application/json"),
             ("content-length", str(len(body))),
@@ -194,11 +200,7 @@ class HTTPProtocol(asyncio.Protocol):
         self.send(h11.Data(data=body))
         self.send(h11.EndOfMessage())
 
-    def send_timeout_response(self):
-        timeout_response = json.dumps({"error": "Request processing timed out"}).encode("utf-8")
-        self.send_response(timeout_response, status_code=408)
-
-    def send_error_response(self, error):
+    def send_error_response(self, error: Any) -> None:
         response_body = json.dumps({"error": error.message}).encode("utf-8")
         headers = [
             ("Content-Type", "application/json"),
@@ -209,6 +211,6 @@ class HTTPProtocol(asyncio.Protocol):
         self.send(h11.Data(data=response_body))
         self.send(h11.EndOfMessage())
 
-    def send(self, event):
+    def send(self, event: h11.Event) -> None:
         data = self.connection.send(event)
         self.transport.write(data)

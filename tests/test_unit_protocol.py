@@ -52,7 +52,6 @@ async def test_handle_connect_success():
 
 @pytest.mark.asyncio
 async def test_handle_connect_failure():
-    # Mock a failure scenario for auth_instance
     auth_instance = MockAuth()
     auth_instance.create_user_and_token = AsyncMock(return_value=None)
     message_sender_instance = MockMessageSender()
@@ -65,7 +64,7 @@ async def test_handle_connect_failure():
     protocol.send_error_response.assert_called_once()
     error_response_call_args = protocol.send_error_response.call_args
     assert error_response_call_args is not None
-    assert error_response_call_args[0][0].status_code == 500  # Assuming 500 is the internal server error code
+    assert error_response_call_args[0][0].status_code == 500
 
 
 async def delayed_response(*args, **kwargs):
@@ -75,23 +74,17 @@ async def delayed_response(*args, **kwargs):
 @pytest.mark.asyncio
 async def test_handle_request_timeout():
     protocol = HTTPProtocol(MockAuth(), MockMessageSender())
-
-    # Use the delayed_response async function as side_effect
     protocol.handle_get_request = AsyncMock(side_effect=delayed_response)
-
-    # Mock the send_timeout_response method
-    protocol.send_timeout_response = AsyncMock()
+    protocol.handle_post_request = AsyncMock(side_effect=delayed_response)
+    protocol.send_error_response = AsyncMock()
 
     # Simulate a GET request
     request_headers = Mock()
     request_headers.method = b"GET"
-    request_headers.target = b"/somepath"
+    request_headers.target = b"/health"
 
-    # Call handle_request and expect it to timeout
     await protocol.handle_request(request_headers, b"")
-
-    # Assert that send_timeout_response was called
-    protocol.send_timeout_response.assert_called_once()
+    protocol.send_error_response.assert_called_once_with(settings.error_messages.request_timeout_error)
 
 
 @pytest.mark.asyncio
