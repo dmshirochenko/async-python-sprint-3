@@ -1,10 +1,10 @@
 import asyncio
-import os
 import logging.config
 
 from dotenv import load_dotenv
 
 from config.logger import LOGGING
+from config.logger import settings
 from src.auth.auth_simple import Auth
 from src.http_protocol.http_protocol import HTTPProtocol
 from src.db_connector.postgres_connector import AsyncDatabaseConnector
@@ -22,10 +22,7 @@ async def main(host, port):
     logger.info("Starting server ...")
     loop = asyncio.get_running_loop()
 
-    # Use environment variable for database URL
-    db_url = os.getenv("DATABASE_URL", "postgresql://test_user:test_user_password@postgres/db_awesome_chat")
-
-    db_connector = AsyncDatabaseConnector(db_url)
+    db_connector = AsyncDatabaseConnector(settings.database_url)
     await db_connector.connect()
     auth_instance = Auth(db_connector)
     message_sender_instance = MessageSender(db_connector)

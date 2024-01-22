@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     base_dir: str = Field(BASE_DIR)
     max_request_time: int = Field(5, env="MAX_REQUEST_TIME")
     max_messages_per_hour: int = Field(20, env="MAX_MESSAGE_PER_HOUR")
+    database_url: str = Field(default="NON_VALID_DEFAULT_DATABASE_URL", env="DATABASE_URL")
     error_messages: ErrorMessages = ErrorMessages()
 
 
