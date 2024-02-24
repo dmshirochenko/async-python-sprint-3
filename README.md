@@ -1,6 +1,6 @@
-### Chat app project
+# Chat app project
 
-#### Server
+## Server
 Implement a service that processes incoming requests from clients.
 
 **Conditions and requirements:**
@@ -10,7 +10,8 @@ Implement a service that processes incoming requests from clients.
 - A reconnected client has the ability to view all previously unread messages until the moment of the last poll (both from the general chat and private ones).
 - By default, the server starts on the local host (127.0.0.1) and on port 8000 (the ability to specify any).
 
-#### Client
+
+## Client
 Implement a service that can connect to the server to exchange messages with other clients.
 
 **Conditions and requirements:**
@@ -19,7 +20,7 @@ Implement a service that can connect to the server to exchange messages with oth
 - Ability to send a message in a private chat (1-to-1) to any participant from the general chat.
 
 
-#### Server Installation
+## Server Installation
 
 1. **Clone the Repository**
    ```
@@ -39,7 +40,7 @@ Implement a service that can connect to the server to exchange messages with oth
    ```
 
 
-#### Endpoint Descriptions for HTTPProtocol
+## Endpoint Descriptions for HTTPProtocol
 
 ## GET Endpoints
 
